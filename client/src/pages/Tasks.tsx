@@ -14,6 +14,7 @@ import {
   FiClock,
   FiActivity,
   FiAlertCircle,
+  FiUsers,
 } from "react-icons/fi";
 import {
   useGetTasksQuery,
@@ -30,6 +31,7 @@ const taskSchema = z.object({
   description: z.string().optional().default(""),
   priority: z.enum(["high", "medium", "low"]),
   status: z.enum(["pending", "in-progress", "completed"]),
+  assignedTo: z.string().optional().nullable().or(z.literal("")),
 });
 
 const Tasks = () => {
@@ -41,6 +43,7 @@ const Tasks = () => {
   const { data: tasksData, isLoading: isTasksLoading } = useGetTasksQuery(undefined, {
     skip: !token,
   });
+  const connectionsList = profileData?.data?.connections || [];
 
   const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
   const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
@@ -50,6 +53,9 @@ const Tasks = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const isCreatorOfEditingTask = editingTask
+    ? (editingTask.createdBy?._id === profileData?.data?._id || editingTask.createdBy === profileData?.data?._id)
+    : true;
 
   const {
     register,
@@ -64,6 +70,7 @@ const Tasks = () => {
       description: "",
       priority: "medium",
       status: "pending",
+      assignedTo: "",
     },
   });
 
@@ -75,6 +82,7 @@ const Tasks = () => {
       description: "",
       priority: "medium",
       status: "pending",
+      assignedTo: "",
     });
     setIsModalOpen(true);
   };
@@ -86,6 +94,7 @@ const Tasks = () => {
     setValue("description", task.description || "");
     setValue("priority", task.priority);
     setValue("status", task.status);
+    setValue("assignedTo", task.assignedTo?._id || task.assignedTo || "");
     setIsModalOpen(true);
   };
 
@@ -168,6 +177,13 @@ const Tasks = () => {
                 Hi, {profileData.data.name}
               </span>
             )}
+            <button
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl border border-slate-800 hover:border-slate-700 hover:bg-slate-900/60 text-indigo-400 hover:text-indigo-300 transition-all cursor-pointer"
+            >
+              <FiUsers className="w-4 h-4" />
+              <span>Connections</span>
+            </button>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl border border-slate-800 hover:border-slate-700 hover:bg-slate-900/60 hover:text-red-400 transition-all cursor-pointer"
@@ -328,6 +344,33 @@ const Tasks = () => {
                       {task.description}
                     </p>
                   )}
+
+                  {/* Task Metadata (Creator and Assignee) */}
+                  <div className="mt-4 pt-3 border-t border-slate-800/40 space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <span className="font-semibold text-slate-500">Created by:</span>
+                      <div className="flex items-center gap-1.5 bg-slate-900/60 px-2 py-1 rounded-lg border border-slate-800/50">
+                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-[9px] uppercase">
+                          {task.createdBy?.name?.charAt(0) || "U"}
+                        </span>
+                        <span>{task.createdBy?.name || "Unknown"}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <span className="font-semibold text-slate-500">Assigned to:</span>
+                      {task.assignedTo ? (
+                        <div className="flex items-center gap-1.5 bg-slate-900/60 px-2 py-1 rounded-lg border border-slate-800/50">
+                          <span className="w-4.5 h-4.5 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-[9px] uppercase">
+                            {task.assignedTo?.name?.charAt(0) || "U"}
+                          </span>
+                          <span>{task.assignedTo?.name}</span>
+                        </div>
+                      ) : (
+                        <span className="italic text-slate-650">Unassigned</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Footer Controls */}
@@ -340,17 +383,19 @@ const Tasks = () => {
                     <button
                       onClick={() => handleEditOpen(task)}
                       className="p-2 rounded-lg bg-slate-800/40 hover:bg-indigo-600/20 hover:text-indigo-400 text-slate-400 border border-transparent hover:border-indigo-500/20 transition-all cursor-pointer"
-                      title="Edit Task"
+                      title={task.createdBy?._id === profileData?.data?._id ? "Edit Task" : "Update Status"}
                     >
                       <FiEdit2 className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => handleDelete(task._id)}
-                      className="p-2 rounded-lg bg-slate-800/40 hover:bg-red-600/20 hover:text-red-400 text-slate-400 border border-transparent hover:border-red-500/20 transition-all cursor-pointer"
-                      title="Delete Task"
-                    >
-                      <FiTrash2 className="w-4 h-4" />
-                    </button>
+                    {task.createdBy?._id === profileData?.data?._id && (
+                      <button
+                        onClick={() => handleDelete(task._id)}
+                        className="p-2 rounded-lg bg-slate-800/40 hover:bg-red-600/20 hover:text-red-400 text-slate-400 border border-transparent hover:border-red-500/20 transition-all cursor-pointer"
+                        title="Delete Task"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -370,22 +415,23 @@ const Tasks = () => {
               <FiX className="w-5 h-5" />
             </button>
 
-            <h3 className="text-2xl font-extrabold mb-6">
-              {editingTask ? "Edit Task" : "Create New Task"}
+            <h3 className="text-2xl font-extrabold mb-6 text-slate-100">
+              {editingTask ? (isCreatorOfEditingTask ? "Edit Task" : "Update Task Status") : "Create New Task"}
             </h3>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Title */}
-              <div className="flex flex-col">
+              <div className="flex flex-col animate-fade-in">
                 <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                  Task Title
+                  Task Title {!isCreatorOfEditingTask && <span className="text-slate-500 font-normal">(Read Only)</span>}
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. Finish landing page"
+                  disabled={!isCreatorOfEditingTask}
                   className={`w-full py-3 px-4 rounded-xl bg-slate-900 border ${
                     errors.title ? "border-red-500/50 focus:border-red-500" : "border-slate-800 focus:border-indigo-500"
-                  } focus:outline-none text-sm font-medium transition-all`}
+                  } focus:outline-none text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                   {...register("title")}
                 />
                 {errors.title && (
@@ -398,24 +444,45 @@ const Tasks = () => {
               {/* Description */}
               <div className="flex flex-col">
                 <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                  Description (Optional)
+                  Description (Optional) {!isCreatorOfEditingTask && <span className="text-slate-500 font-normal">(Read Only)</span>}
                 </label>
                 <textarea
                   placeholder="Describe the details of this task..."
                   rows={3}
-                  className="w-full py-3 px-4 rounded-xl bg-slate-900 border border-slate-800 focus:border-indigo-500 focus:outline-none text-sm font-medium transition-all resize-none"
+                  disabled={!isCreatorOfEditingTask}
+                  className="w-full py-3 px-4 rounded-xl bg-slate-900 border border-slate-800 focus:border-indigo-500 focus:outline-none text-sm font-medium transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                   {...register("description")}
                 />
+              </div>
+
+              {/* Assignee */}
+              <div className="flex flex-col">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Assign To (Connections) {!isCreatorOfEditingTask && <span className="text-slate-500 font-normal">(Read Only)</span>}
+                </label>
+                <select
+                  disabled={!isCreatorOfEditingTask}
+                  className="w-full py-3 px-4 rounded-xl bg-slate-900 border border-slate-800 focus:border-indigo-500 focus:outline-none text-sm font-semibold cursor-pointer text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  {...register("assignedTo")}
+                >
+                  <option value="">Unassigned (Only Me)</option>
+                  {connectionsList.map((conn) => (
+                    <option key={conn._id} value={conn._id} className="bg-[#0B0F19]">
+                      {conn.name} ({conn.email})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 {/* Priority */}
                 <div className="flex flex-col">
                   <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    Priority
+                    Priority {!isCreatorOfEditingTask && <span className="text-slate-500 font-normal">(Read Only)</span>}
                   </label>
                   <select
-                    className="w-full py-3 px-4 rounded-xl bg-slate-900 border border-slate-800 focus:border-indigo-500 focus:outline-none text-sm font-semibold cursor-pointer"
+                    disabled={!isCreatorOfEditingTask}
+                    className="w-full py-3 px-4 rounded-xl bg-slate-900 border border-slate-800 focus:border-indigo-500 focus:outline-none text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     {...register("priority")}
                   >
                     <option value="low">Low</option>
@@ -430,7 +497,7 @@ const Tasks = () => {
                     Status
                   </label>
                   <select
-                    className="w-full py-3 px-4 rounded-xl bg-slate-900 border border-slate-800 focus:border-indigo-500 focus:outline-none text-sm font-semibold cursor-pointer"
+                    className="w-full py-3 px-4 rounded-xl bg-slate-900 border border-slate-800 focus:border-indigo-500 focus:outline-none text-sm font-semibold cursor-pointer text-slate-100"
                     {...register("status")}
                   >
                     <option value="pending">Pending</option>
@@ -457,7 +524,7 @@ const Tasks = () => {
                   {isCreating || isUpdating ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : editingTask ? (
-                    "Save Changes"
+                    isCreatorOfEditingTask ? "Save Changes" : "Update Status"
                   ) : (
                     "Create Task"
                   )}
