@@ -44,3 +44,4 @@ dump.rdb
 
 # TypeScript
 *.tsbuildinfo
+/src/generated/prisma
