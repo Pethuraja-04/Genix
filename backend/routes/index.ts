@@ -9,5 +9,8 @@ router.get("/health", (req, res) => {
     message: "API Running",
   });
 });
+router.get("/auth-test", (req, res) => {
+  res.send("Auth test works");
+});
 
 export default router;
