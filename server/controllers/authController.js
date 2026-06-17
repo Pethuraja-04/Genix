@@ -1,6 +1,7 @@
 const User = require("../models/User")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
+const { redisClient } = require("../config/redis")
 exports.register = async (req, res) => {
 
     try {
@@ -31,6 +32,31 @@ exports.login = async (req, res) => {
         }
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secret", { expiresIn: "1h" })
         res.status(200).json({ message: "Login successful", token, "user": { _id: user._id, name: user.name, email: user.email } })
+    } catch (error) {
+        res.status(500).json({ message: error.message })
+    }
+}
+
+exports.logout = async (req, res) => {
+    try {
+        const token = req.token // set by authMiddleware
+        if (!token) {
+            return res.status(400).json({ message: "No token provided" })
+        }
+
+        // Decode to find remaining TTL so Redis entry auto-expires with the token
+        const decoded = jwt.decode(token)
+        const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600
+
+        if (ttl > 0) {
+            try {
+                await redisClient.setEx(`blacklist:${token}`, ttl, "1")
+            } catch (redisErr) {
+                console.warn("Redis blacklist write failed:", redisErr.message)
+            }
+        }
+
+        res.status(200).json({ message: "Logged out successfully" })
     } catch (error) {
         res.status(500).json({ message: error.message })
     }

@@ -22,7 +22,7 @@ import {
   useUpdateTaskMutation,
   useDeleteTaskMutation,
 } from "../../services/taskApi";
-import { useProfileQuery } from "../../services/authApi";
+import { useProfileQuery, useLogoutMutation } from "../../services/authApi";
 import { useToast } from "../context/ToastContext";
 
 // Task Validation Schema
@@ -48,6 +48,7 @@ const Tasks = () => {
   const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
   const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
   const [deleteTask,{isLoading: isDeleting}] = useDeleteTaskMutation();
+  const [logoutApi] = useLogoutMutation();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -129,7 +130,13 @@ const Tasks = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Tell the server to blacklist the token in Redis
+      await logoutApi(undefined).unwrap();
+    } catch {
+      // Proceed with client-side logout even if server call fails
+    }
     localStorage.removeItem("token");
     showToast("Logged Out", "You have been securely logged out.", "success");
     navigate("/");

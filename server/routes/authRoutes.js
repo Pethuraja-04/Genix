@@ -1,5 +1,5 @@
 const express = require("express")
-const { register, login, getProfile, sendConnectionRequest, acceptConnectionRequest, rejectConnectionRequest, searchUsers } = require("../controllers/authController")
+const { register, login, logout, getProfile, sendConnectionRequest, acceptConnectionRequest, rejectConnectionRequest, searchUsers } = require("../controllers/authController")
 const protect = require("../middleware/authMiddleware")
 const router = express.Router()
 
@@ -128,6 +128,22 @@ router.post("/register", register)
  *         description: Server error
  */
 router.post("/login", login)
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout user and blacklist their JWT in Redis
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *       401:
+ *         description: Not authorized
+ */
+router.post("/logout", protect, logout)
 
 /**
  * @swagger

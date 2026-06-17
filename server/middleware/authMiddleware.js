@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const { redisClient } = require("../config/redis");
 
-const protect = (req, res, next) => {
+const protect = async (req, res, next) => {
   try {
     let token;
 
@@ -8,15 +9,25 @@ const protect = (req, res, next) => {
       req.headers.authorization &&
       req.headers.authorization.startsWith("Bearer")
     ) {
-      console.log("Header Auth : " ,req.headers.authorization)
       token = req.headers.authorization.split(" ")[1];
 
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET
-      );
+      // Check Redis token blacklist (set on logout)
+      try {
+        const isBlacklisted = await redisClient.get(`blacklist:${token}`);
+        if (isBlacklisted) {
+          return res.status(401).json({
+            success: false,
+            message: "Token has been invalidated. Please log in again.",
+          });
+        }
+      } catch (redisErr) {
+        // Redis unavailable — skip blacklist check, still verify JWT
+        console.warn("Redis unavailable, skipping blacklist check:", redisErr.message);
+      }
 
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = decoded;
+      req.token = token; // attach token so logout controller can blacklist it
 
       next();
     } else {

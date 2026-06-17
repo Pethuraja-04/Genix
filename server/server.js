@@ -6,8 +6,10 @@ const http = require("http")
 const { Server } = require("socket.io")
 
 const connectDB = require("./config/db");
+const { connectRedis } = require("./config/redis");
 
 connectDB();
+connectRedis();
 
 const app = express()
 app.use(express.json())

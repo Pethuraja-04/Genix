@@ -18,6 +18,13 @@ export const authApi = api.injectEndpoints({
       }),
     }),
 
+    logout: builder.mutation({
+      query: () => ({
+        url: "/auth/logout",
+        method: "POST",
+      }),
+    }),
+
     profile: builder.query({
       query: () => "/auth/profile",
       providesTags: ["User"],
@@ -60,6 +67,7 @@ export const authApi = api.injectEndpoints({
 export const {
   useRegisterMutation,
   useLoginMutation,
+  useLogoutMutation,
   useProfileQuery,
   useSendConnectionRequestMutation,
   useAcceptConnectionRequestMutation,
