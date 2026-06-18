@@ -8,9 +8,9 @@ import { registerSchema } from "./auth.validation";
 
 const router = Router();
 
-router.get(
+router.post(
   "/register",
-//   validate(registerSchema),
+   validate(registerSchema),
   register
 );
 

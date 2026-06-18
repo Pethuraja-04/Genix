@@ -1,33 +1,32 @@
 import { Request, Response } from "express";
-// import { registerUser } from "./auth.service";
+import { registerUser } from "./auth.service";
 
 export const register = async (
   req: Request,
   res: Response
 ) => {
-//   try {
-//     const { name, email, password } = req.body;
+  try {
+    const { name, email, password } = req.body;
 
-//     const user = await registerUser(
-//       name,
-//       email,
-//       password
-//     );
+    const user = await registerUser(
+      name,
+      email,
+      password
+    );
 
-//     return res.status(201).json({
-//       success: true,
-//       data: user,
-//     });
-//   } catch (error) {
-//     return res.status(400).json({
-//       success: false,
-//       message:
-//         error instanceof Error
-//           ? error.message
-//           : "Something went wrong",
-//     });
-//   }
+    return res.status(201).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong",
+    });
+  }
 
-res.send("API Running");
 
 };
